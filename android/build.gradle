@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.8.0'  // Chọn phiên bản Kotlin phù hợp với dự án của bạn
+    ext.kotlin_version = '1.9.0'  // Chọn phiên bản Kotlin phù hợp với dự án của bạn
 
     repositories {
         google()

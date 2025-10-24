@@ -1,7 +1,6 @@
-import 'package:airbnb_app_ui/Components/display_place.dart';
-import 'package:airbnb_app_ui/Components/display_total_price.dart';
-import 'package:airbnb_app_ui/Components/map_with_custom_info_windows.dart';
-import 'package:airbnb_app_ui/Components/search_bar_and_filter.dart';
+import 'package:airbnb_app/Components/map_with_custom_info_windows.dart';
+import 'package:airbnb_app/Components/search_bar_and_filter.dart';
+import 'package:airbnb_app/view/place_detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -13,132 +12,178 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  // collection for category
-  final CollectionReference categoryCollection =
-      FirebaseFirestore.instance.collection("AppCategory");
+  String searchQuery = "";
 
-  int selectedIndex = 0;
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100],
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // for search bar and filter button
-            const SearchBarAndFilter(),
-            // let's fetch list of category items from firebase.
-            listOfCategoryItems(size),
-            const Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                   // for switch button
-                    DisplayTotalPrice(),
-                    SizedBox(height: 15),
-                    // displat the place items
-                    DisplayPlace(),
-                  
-                  ],
-                ),
+            SearchBarAndFilter(
+              onSearch: (query) {
+                setState(() {
+                  searchQuery = query.toLowerCase();
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection("myAppCpollection")
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  // Lọc dữ liệu ngay trên client
+                  final docs = snapshot.data!.docs.where((doc) {
+                    if (searchQuery.isEmpty) return true;
+                    final data = doc.data() as Map<String, dynamic>;
+                    final title = (data['title'] ?? '').toString().toLowerCase();
+                    final address = (data['address'] ?? '').toString().toLowerCase();
+                    final vendor = (data['vendor'] ?? '').toString().toLowerCase();
+                    return title.contains(searchQuery) ||
+                        address.contains(searchQuery) ||
+                        vendor.contains(searchQuery);
+                  }).toList();
+
+                  if (docs.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        "Không tìm thấy kết quả phù hợp.",
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: GridView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      shrinkWrap: true,
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final place = docs[index];
+                        final data = place.data() as Map<String, dynamic>;
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PlaceDetailScreen(place: place),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(15)),
+                                  child: Image.network(
+                                    data['image'] ?? '',
+                                    height: 120,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                    const Icon(Icons.image_not_supported,
+                                        size: 40),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        data['title'] ?? '',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        data['address'] ?? '',
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            "\$${data['price'] ?? 0}",
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.star,
+                                                  color: Colors.orange,
+                                                  size: 14),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                data['rating']?.toString() ??
+                                                    "0",
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
-      // for google map
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation:
+      FloatingActionButtonLocation.centerDocked,
       floatingActionButton: const MapWithCustomInfoWindows(),
-    );
-  }
-
-  StreamBuilder<QuerySnapshot<Object?>> listOfCategoryItems(Size size) {
-    return StreamBuilder(
-      stream: categoryCollection.snapshots(),
-      builder: (context, streamSnapshot) {
-        if (streamSnapshot.hasData) {
-          return Stack(
-            children: [
-              const Positioned(
-                left: 0,
-                right: 0,
-                top: 80,
-                child: Divider(
-                  color: Colors.black12,
-                ),
-              ),
-              SizedBox(
-                height: size.height * 0.12,
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: streamSnapshot.data!.docs.length,
-                  physics: const BouncingScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.only(
-                          top: 20,
-                          right: 20,
-                          left: 20,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 32,
-                              width: 40,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                              child: Image.network(
-                                streamSnapshot.data!.docs[index]['image'],
-                                color: selectedIndex == index
-                                    ? Colors.black
-                                    : Colors.black45,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              streamSnapshot.data!.docs[index]['title'],
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: selectedIndex == index
-                                    ? Colors.black
-                                    : Colors.black45,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              height: 3,
-                              width: 50,
-                              color: selectedIndex == index
-                                  ? Colors.black
-                                  : Colors.transparent,
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        }
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
     );
   }
 }

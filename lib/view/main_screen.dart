@@ -1,7 +1,7 @@
-import 'package:airbnb_app_ui/view/explore_screen.dart';
-import 'package:airbnb_app_ui/view/message.dart';
-import 'package:airbnb_app_ui/view/profile_page.dart';
-import 'package:airbnb_app_ui/view/wishlists.dart';
+import 'package:airbnb_app/view/explore_screen.dart';
+import 'package:airbnb_app/view/profile_page.dart';
+import 'package:airbnb_app/view/trips_screen.dart';
+import 'package:airbnb_app/view/wishlists.dart';
 import 'package:flutter/material.dart';
 
 class AppMainScreen extends StatefulWidget {
@@ -20,8 +20,7 @@ class _AppMainScreenState extends State<AppMainScreen> {
     page = [
       const ExploreScreen(),
       const Wishlists(),
-      const Scaffold(),
-      const MessagesScreen(),
+      const TripsScreen(),
       const ProfilePage(),
     ];
     super.initState();
@@ -35,7 +34,7 @@ class _AppMainScreenState extends State<AppMainScreen> {
         backgroundColor: Colors.white,
         elevation: 5,
         iconSize: 32,
-        selectedItemColor: Colors.pinkAccent,
+        selectedItemColor: Color(0xFF8FAF01),
         unselectedItemColor: Colors.black45,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -51,40 +50,40 @@ class _AppMainScreenState extends State<AppMainScreen> {
             icon: Image.network(
               "https://cdn3.iconfinder.com/data/icons/feather-5/24/search-512.png",
               height: 30,
-              color: selectedIndex == 0 ? Colors.pinkAccent : Colors.black45,
+              color: selectedIndex == 0 ? Color(0xFF8FAF01) : Colors.black45,
             ),
-            label: "Explore",
+            label: "Khám phá",
           ),
           BottomNavigationBarItem(
             icon: Icon(
               Icons.favorite_border,
-              color: selectedIndex == 1 ? Colors.pinkAccent : Colors.black45,
+              color: selectedIndex == 1 ? Color(0xFF8FAF01) : Colors.black45,
             ),
-            label: "Wishlists",
+            label: "Yêu thích",
           ),
           BottomNavigationBarItem(
             icon: Image.network(
               "https://cdn-icons-png.flaticon.com/512/2111/2111307.png",
               height: 30,
-              color: selectedIndex == 2 ? Colors.pinkAccent : Colors.black45,
+              color: selectedIndex == 2 ? Color(0xFF8FAF01) : Colors.black45,
             ),
-            label: "Trip",
+            label: "Chuyến đi",
           ),
-          BottomNavigationBarItem(
-            icon: Image.network(
-              "https://static.vecteezy.com/system/resources/thumbnails/014/441/006/small_2x/chat-message-thin-line-icon-social-icon-set-png.png",
-              height: 30,
-              color: selectedIndex == 3 ? Colors.pinkAccent : Colors.black45,
-            ),
-            label: "Message",
-          ),
+          // BottomNavigationBarItem(
+          //   icon: Image.network(
+          //     "https://static.vecteezy.com/system/resources/thumbnails/014/441/006/small_2x/chat-message-thin-line-icon-social-icon-set-png.png",
+          //     height: 30,
+          //     color: selectedIndex == 3 ? Color(0xFF8FAF01) : Colors.black45,
+          //   ),
+          //   label: "Tin nhắn",
+          // ),
           BottomNavigationBarItem(
             icon: Image.network(
               "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
               height: 30,
-              color: selectedIndex == 4 ? Colors.pinkAccent : Colors.black45,
+              color: selectedIndex == 3 ? Color(0xFF8FAF01) : Colors.black45,
             ),
-            label: "Profile",
+            label: "Hồ sơ",
           ),
         ],
       ),

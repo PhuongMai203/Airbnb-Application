@@ -1,4 +1,4 @@
-package com.example.airbnb_app_ui
+package com.example.airbnb_app
 
 import io.flutter.embedding.android.FlutterActivity
 
