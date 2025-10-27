@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'admin/admin_dashboard.dart';
 import 'main_screen.dart';
 
 class SimpleAuthScreen extends StatefulWidget {
@@ -53,24 +55,56 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
       return;
     }
 
-    if (!isLogin) {
-      final confirmPassword = confirmPasswordController.text.trim();
-      if (password != confirmPassword) {
-        showSnackBar("Mật khẩu xác nhận không khớp!");
-        return;
-      }
-    }
-
     try {
       if (isLogin) {
-        await _auth.signInWithEmailAndPassword(email: email, password: password);
-        // Chuyển sang AppMainScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AppMainScreen()),
-        );
+        final userCredential = await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
+        final user = userCredential.user;
+
+        if (user != null) {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (snapshot.exists) {
+            final role = snapshot.data()?['role'] ?? 'user';
+
+            if (role == 'admin') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminDashboard()),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AppMainScreen()),
+              );
+            }
+          } else {
+            showSnackBar("Không tìm thấy dữ liệu người dùng!");
+          }
+        }
       } else {
-        await _auth.createUserWithEmailAndPassword(email: email, password: password);
+        // Đăng ký
+        final confirmPassword = confirmPasswordController.text.trim();
+        if (password != confirmPassword) {
+          showSnackBar("Mật khẩu xác nhận không khớp!");
+          return;
+        }
+
+        final userCredential = await _auth.createUserWithEmailAndPassword(
+            email: email, password: password);
+
+        // Lưu thêm thông tin user vào Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          "email": email,
+          "role": "user", // mặc định là user
+        });
+
         await _auth.signOut();
         showSnackBar("Đăng ký thành công! Vui lòng đăng nhập.");
         _tabController.animateTo(0);
@@ -81,7 +115,6 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
     } on FirebaseAuthException catch (e) {
       showSnackBar(e.message ?? "Lỗi xác thực");
     }
-
   }
 
   @override
