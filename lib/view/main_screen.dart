@@ -69,14 +69,6 @@ class _AppMainScreenState extends State<AppMainScreen> {
             ),
             label: "Chuyến đi",
           ),
-          // BottomNavigationBarItem(
-          //   icon: Image.network(
-          //     "https://static.vecteezy.com/system/resources/thumbnails/014/441/006/small_2x/chat-message-thin-line-icon-social-icon-set-png.png",
-          //     height: 30,
-          //     color: selectedIndex == 3 ? Color(0xFF8FAF01) : Colors.black45,
-          //   ),
-          //   label: "Tin nhắn",
-          // ),
           BottomNavigationBarItem(
             icon: Image.network(
               "https://cdn-icons-png.flaticon.com/512/1144/1144760.png",
