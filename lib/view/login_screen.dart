@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:airbnb_app/server/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,8 +21,6 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
   final TextEditingController confirmPasswordController =
   TextEditingController();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   @override
   void initState() {
     super.initState();
@@ -36,12 +34,12 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
   }
 
   bool isValidEmail(String email) {
-    // Kiểm tra định dạng email cơ bản
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return emailRegex.hasMatch(email);
   }
 
-  Future<void> handleAuth({required bool isLogin}) async {
+  // ✨ Cập nhật: gọi AuthService để login
+  Future<void> handleLogin() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
@@ -55,65 +53,61 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
       return;
     }
 
+    final role = await AuthService.login(email, password);
+
+    if (role == 'admin') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+      );
+    } else if (role == 'user') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AppMainScreen()),
+      );
+    } else {
+      // lỗi đăng nhập
+      showSnackBar(role);
+    }
+  }
+
+  // ✨ Cập nhật: gọi AuthService để đăng ký
+  Future<void> handleRegister() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      showSnackBar("Vui lòng điền đầy đủ thông tin!");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showSnackBar("Email không hợp lệ!");
+      return;
+    }
+
+    if (password != confirmPassword) {
+      showSnackBar("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+
     try {
-      if (isLogin) {
-        final userCredential = await _auth.signInWithEmailAndPassword(
-            email: email, password: password);
-        final user = userCredential.user;
+      // Tạo user mới
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-        if (user != null) {
-          final snapshot = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+      // Lưu mặc định role = user
+      await AuthService.setUserRole(userCredential.user!.uid, 'user');
 
-          if (snapshot.exists) {
-            final role = snapshot.data()?['role'] ?? 'user';
-
-            if (role == 'admin') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminDashboard()),
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AppMainScreen()),
-              );
-            }
-          } else {
-            showSnackBar("Không tìm thấy dữ liệu người dùng!");
-          }
-        }
-      } else {
-        // Đăng ký
-        final confirmPassword = confirmPasswordController.text.trim();
-        if (password != confirmPassword) {
-          showSnackBar("Mật khẩu xác nhận không khớp!");
-          return;
-        }
-
-        final userCredential = await _auth.createUserWithEmailAndPassword(
-            email: email, password: password);
-
-        // Lưu thêm thông tin user vào Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          "email": email,
-          "role": "user", // mặc định là user
-        });
-
-        await _auth.signOut();
-        showSnackBar("Đăng ký thành công! Vui lòng đăng nhập.");
-        _tabController.animateTo(0);
-        emailController.clear();
-        passwordController.clear();
-        confirmPasswordController.clear();
-      }
+      await FirebaseAuth.instance.signOut();
+      showSnackBar("Đăng ký thành công! Vui lòng đăng nhập.");
+      _tabController.animateTo(0);
+      emailController.clear();
+      passwordController.clear();
+      confirmPasswordController.clear();
     } on FirebaseAuthException catch (e) {
-      showSnackBar(e.message ?? "Lỗi xác thực");
+      showSnackBar(e.message ?? "Lỗi đăng ký");
     }
   }
 
@@ -144,15 +138,15 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
                   ),
                   child: TabBar(
                     controller: _tabController,
-                    labelColor: Color(0xFF4B5320),
+                    labelColor: const Color(0xFF4B5320),
                     unselectedLabelColor: Colors.black87,
                     labelStyle: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                     unselectedLabelStyle: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.normal),
                     indicator: const UnderlineTabIndicator(
-                      borderSide: BorderSide(width: 4.0, color: Color(
-                          0xFFB0C63A)),
+                      borderSide:
+                      BorderSide(width: 4.0, color: Color(0xFFB0C63A)),
                       insets: EdgeInsets.symmetric(horizontal: 10.0),
                     ),
                     tabs: const [
@@ -227,9 +221,9 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
           ],
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => handleAuth(isLogin: isLogin),
+            onPressed: isLogin ? handleLogin : handleRegister,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFFD7E691),
+              backgroundColor: const Color(0xFFD7E691),
               padding:
               const EdgeInsets.symmetric(vertical: 15, horizontal: 50),
               shape: RoundedRectangleBorder(
@@ -237,8 +231,10 @@ class _SimpleAuthScreenState extends State<SimpleAuthScreen>
             ),
             child: Text(
               isLogin ? "Đăng nhập" : "Đăng ký",
-              style:
-              const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4B5320)),
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4B5320)),
             ),
           ),
         ],

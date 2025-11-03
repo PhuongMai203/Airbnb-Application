@@ -1,3 +1,5 @@
+import 'package:airbnb_app/view/admin/widgets/add_hotel.dart';
+import 'package:airbnb_app/view/admin/widgets/edit_hotel.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -173,7 +175,7 @@ class ManageHotelsScreen extends StatelessWidget {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (_) => AddHotelDialog(hotelsRef: hotelsRef),
+                  builder: (_) => HotelDialog(hotelsRef: hotelsRef),
                 );
               },
               icon: const Icon(Icons.add),
@@ -182,185 +184,6 @@ class ManageHotelsScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ------------------- DIALOG THÊM KHÁCH SẠN -------------------
-class AddHotelDialog extends StatefulWidget {
-  final CollectionReference hotelsRef;
-  const AddHotelDialog({super.key, required this.hotelsRef});
-
-  @override
-  State<AddHotelDialog> createState() => _AddHotelDialogState();
-}
-
-class _AddHotelDialogState extends State<AddHotelDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _ratingController = TextEditingController();
-  final _reviewController = TextEditingController();
-  final _imageController = TextEditingController();
-  bool _isSaving = false;
-
-  Future<void> _saveHotel() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
-
-    await widget.hotelsRef.add({
-      "title": _titleController.text.trim(),
-      "address": _addressController.text.trim(),
-      "price": int.tryParse(_priceController.text.trim()) ?? 0,
-      "rating": double.tryParse(_ratingController.text.trim()) ?? 0.0,
-      "review": int.tryParse(_reviewController.text.trim()) ?? 0,
-      "image": _imageController.text.trim(),
-      "date": FieldValue.serverTimestamp(),
-    });
-
-    if (mounted) {
-      setState(() => _isSaving = false);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Thêm khách sạn thành công")));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Thêm khách sạn mới"),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildTextField(_titleController, "Tên khách sạn"),
-              const SizedBox(height: 8),
-              _buildTextField(_addressController, "Địa chỉ"),
-              const SizedBox(height: 8),
-              _buildTextField(_priceController, "Giá", keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              _buildTextField(_ratingController, "Đánh giá", keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              _buildTextField(_reviewController, "Số lượt review", keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              _buildTextField(_imageController, "URL hình ảnh", keyboardType: TextInputType.url),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: _isSaving ? null : () => Navigator.pop(context), child: const Text("Hủy")),
-        ElevatedButton(onPressed: _isSaving ? null : _saveHotel, child: const Text("Lưu")),
-      ],
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      validator: (value) {
-        if (value == null || value.trim().isEmpty) return "Vui lòng nhập $label";
-        return null;
-      },
-    );
-  }
-}
-
-// ------------------- DIALOG CHỈNH SỬA KHÁCH SẠN -------------------
-class EditHotelDialog extends StatefulWidget {
-  final CollectionReference hotelsRef;
-  final String docId;
-  final Map<String, dynamic> data;
-  const EditHotelDialog({super.key, required this.hotelsRef, required this.docId, required this.data});
-
-  @override
-  State<EditHotelDialog> createState() => _EditHotelDialogState();
-}
-
-class _EditHotelDialogState extends State<EditHotelDialog> {
-  late TextEditingController _titleController;
-  late TextEditingController _addressController;
-  late TextEditingController _priceController;
-  late TextEditingController _ratingController;
-  late TextEditingController _reviewController;
-  late TextEditingController _imageController;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController(text: widget.data['title']);
-    _addressController = TextEditingController(text: widget.data['address']);
-    _priceController = TextEditingController(text: widget.data['price'].toString());
-    _ratingController = TextEditingController(text: widget.data['rating'].toString());
-    _reviewController = TextEditingController(text: widget.data['review'].toString());
-    _imageController = TextEditingController(text: widget.data['image']);
-  }
-
-  Future<void> _updateHotel() async {
-    setState(() => _isSaving = true);
-    await widget.hotelsRef.doc(widget.docId).update({
-      "title": _titleController.text.trim(),
-      "address": _addressController.text.trim(),
-      "price": int.tryParse(_priceController.text.trim()) ?? 0,
-      "rating": double.tryParse(_ratingController.text.trim()) ?? 0.0,
-      "review": int.tryParse(_reviewController.text.trim()) ?? 0,
-      "image": _imageController.text.trim(),
-    });
-    if (mounted) {
-      setState(() => _isSaving = false);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cập nhật khách sạn thành công")));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Chỉnh sửa khách sạn"),
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildTextField(_titleController, "Tên khách sạn"),
-            const SizedBox(height: 8),
-            _buildTextField(_addressController, "Địa chỉ"),
-            const SizedBox(height: 8),
-            _buildTextField(_priceController, "Giá", keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            _buildTextField(_ratingController, "Đánh giá", keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            _buildTextField(_reviewController, "Số lượt review", keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            _buildTextField(_imageController, "URL hình ảnh", keyboardType: TextInputType.url),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: _isSaving ? null : () => Navigator.pop(context), child: const Text("Hủy")),
-        ElevatedButton(onPressed: _isSaving ? null : _updateHotel, child: const Text("Lưu")),
-      ],
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
